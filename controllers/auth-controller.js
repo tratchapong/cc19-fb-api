@@ -2,7 +2,8 @@ const jwt = require('jsonwebtoken')
 const prisma = require('../models')
 const bcrypt = require('bcryptjs')
 
-const createError = require("../utils/createError")
+const createError = require("../utils/createError");
+const tryCatch = require('../utils/tryCatch');
 
 function checkEmailorMobile(identity) {
 	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -21,9 +22,8 @@ function checkEmailorMobile(identity) {
 	return identityKey
 }
 
-module.exports.register = async (req, res, next) => {
-	try {
-		const { identity, firstName, lastName, password, confirmPassword } = req.body
+module.exports.register = tryCatch(async (req, res, next) => {
+	const { identity, firstName, lastName, password, confirmPassword } = req.body
 		// validation
 		if (!(identity.trim() && firstName.trim() && lastName.trim() && password.trim() && confirmPassword.trim())) {
 			createError(400, 'Please fill all data')
@@ -55,50 +55,43 @@ module.exports.register = async (req, res, next) => {
 		const result = await prisma.user.create({ data: newUser })
 		console.log(result)
 		res.json({ msg: `Register successful`, result })
-	} catch (err) {
-		next(err)
+})
+
+module.exports.login = tryCatch(async (req, res, next) => {
+	
+	const { identity, password } = req.body
+	// validation
+	if (!identity.trim() || !password.trim()) {
+		createError(400, 'Please fill all data')
 	}
 
-}
+	// identity เป็น email หรือ mobile phone number
+	const identityKey = checkEmailorMobile(identity)
 
-module.exports.login = async (req, res, next) => {
-	try {
-		const { identity, password } = req.body
-		// validation
-		if (!identity.trim() || !password.trim()) {
-			createError(400, 'Please fill all data')
-		}
-	
-		// identity เป็น email หรือ mobile phone number
-		const identityKey = checkEmailorMobile(identity)
-	
-		// find user
-		const foundUser = await prisma.user.findUnique({
-			where: { [identityKey] : identity}
-		})
-	
-		if(!foundUser) {
-			createError(401, 'Invalid Login')
-		}
-	
-		// check password
-		let pwOk = await bcrypt.compare(password, foundUser.password)
-		if(!pwOk) {
-			createError(401, 'Invalid Login')
-		}
-	
-		// create jwt token
-	
-		const payload = { id: foundUser.id }
-		const token = jwt.sign(payload, process.env.JWT_SECRET, { 
-			expiresIn : '15d'
-		})
-		
-		res.json({ msg: 'Login successful', token: token, user: foundUser })
-	} catch(err) {
-		next(err)
+	// find user
+	const foundUser = await prisma.user.findUnique({
+		where: { [identityKey] : identity}
+	})
+
+	if(!foundUser) {
+		createError(401, 'Invalid Login')
 	}
-}
+
+	// check password
+	let pwOk = await bcrypt.compare(password, foundUser.password)
+	if(!pwOk) {
+		createError(401, 'Invalid Login')
+	}
+
+	// create jwt token
+
+	const payload = { id: foundUser.id }
+	const token = jwt.sign(payload, process.env.JWT_SECRET, { 
+		expiresIn : '15d'
+	})
+	
+	res.json({ msg: 'Login successful', token: token, user: foundUser })
+})
 
 module.exports.getMe = (req, res) => {
 	res.json({ msg: 'Getme...' })
