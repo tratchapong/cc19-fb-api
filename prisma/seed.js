@@ -38,3 +38,4 @@ async function seedDB() {
 
 seedDB()
 
+// npx prisma db seed
