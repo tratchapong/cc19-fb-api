@@ -4,7 +4,9 @@ CC19-Fakebook-API
 PORT=8899  
 DATABASE_URL= ***  
 JWT_SECRET= ***  
-
+CLOUDINARY_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 ---
 ### service
 |path |method |authen |params |query |body |
