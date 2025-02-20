@@ -26,9 +26,39 @@ module.exports.createPost = tryCatch(async (req, res) => {
 	res.status(201).json({msg: "create post done", result: rs})
 })
 
-module.exports.getAllPosts = async (req, res) => {
-	res.json({ msg: 'Get all Post' })
-}
+module.exports.getAllPosts = tryCatch(async (req, res) => {
+	const rs = await prisma.post.findMany({
+		orderBy : { createdAt : 'desc' },
+		include : { 
+			user : {
+				select : {
+					firstName: true, lastName: true, profileImage:true
+				}
+			},
+			comments : {
+				// select : { message : true	},
+				include : {
+					user : {
+						select : {
+							firstName: true, lastName: true, profileImage:true
+						}
+					}
+				}
+			},
+			likes : {
+				include : {
+					user: {
+						select : {
+							firstName: true, lastName: true, profileImage:true
+						}
+					}
+				}
+			}
+		 }
+	})
+	res.json({ posts : rs})
+})
+
 module.exports.updatePost = async (req, res) => {
 	res.json({ msg: 'Update Post' })
 }
