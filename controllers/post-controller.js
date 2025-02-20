@@ -59,9 +59,7 @@ module.exports.getAllPosts = tryCatch(async (req, res) => {
 	res.json({ posts : rs})
 })
 
-module.exports.updatePost = async (req, res) => {
-	res.json({ msg: 'Update Post' })
-}
+
 module.exports.deletePost = tryCatch(async (req, res) => {
 	const {id} = req.params
 
@@ -73,6 +71,31 @@ module.exports.deletePost = tryCatch(async (req, res) => {
 	const rs = await prisma.post.delete({
 		where : {id: +id}
 	})
-
 	res.json({ msg: `Delete post id=${id} done`, deletedPost : postData })
+})
+
+module.exports.updatePost = tryCatch(async (req, res) => {
+	const {id} = req.params
+	const {message, removePic} = req.body
+
+	const postData = await prisma.post.findUnique({where : {id : +id} })
+	if(!postData || req.user.id !== postData.userId) {
+		createError(400,'Cannot edit this post')
+	}
+	const haveFile = !!req.file
+	if(haveFile) {
+		uploadResult = await cloudinary.uploader.upload(req.file.path, {
+			overwrite : true,
+			public_id : path.parse(req.file.path).name
+		})
+		fs.unlink(req.file.path)
+	}
+	let data = haveFile
+		? { message, image: uploadResult.secure_url, userId: req.user.id}
+		: { message, userId: req.user.id, image: removePic ? '' : postData.image}
+	const rs = await prisma.post.update({
+		where : { id: +id},
+		data
+	})
+	res.json({ msg: 'Update Post' })
 })
